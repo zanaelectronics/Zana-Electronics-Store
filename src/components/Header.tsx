@@ -1,9 +1,16 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Globe, Menu, ShoppingBag, User, X, LogOut, LayoutDashboard, Shield } from "lucide-react";
-import { useState } from "react";
+import { Globe, Menu, ShoppingBag, User, X, LogOut, LayoutDashboard, Shield, Check } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useI18n, type Language } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
+
+const langFlags: Record<Language, string> = {
+  en: "🇬🇧",
+  rw: "🇷🇼",
+  sw: "🇹🇿",
+  zh: "🇨🇳",
+};
 
 export function Header() {
   const { t, language, setLanguage, languages } = useI18n();
@@ -11,14 +18,24 @@ export function Header() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  // Close lang dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            Z
-          </div>
+          <img src="/images/zana-logo.png" alt="ZANA" className="h-10 w-10 object-contain" />
           <span className="text-xl font-bold tracking-tight">ZANA</span>
         </Link>
 
@@ -42,19 +59,23 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Button variant="ghost" size="icon" onClick={() => setLangOpen(!langOpen)} className="text-muted-foreground">
+          {/* Language selector */}
+          <div className="relative" ref={langRef}>
+            <Button variant="ghost" size="sm" onClick={() => setLangOpen(!langOpen)} className="gap-1.5 text-muted-foreground">
+              <span className="text-base leading-none">{langFlags[language]}</span>
               <Globe className="h-4 w-4" />
             </Button>
             {langOpen && (
-              <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border bg-popover p-1 shadow-lg">
+              <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border bg-popover p-1 shadow-lg z-[100]">
                 {(Object.entries(languages) as [Language, string][]).map(([code, name]) => (
                   <button
                     key={code}
                     onClick={() => { setLanguage(code); setLangOpen(false); }}
-                    className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent ${language === code ? "bg-accent font-medium" : ""}`}
+                    className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent ${language === code ? "bg-accent font-medium" : ""}`}
                   >
-                    {name}
+                    <span className="text-lg leading-none">{langFlags[code]}</span>
+                    <span className="flex-1">{name}</span>
+                    {language === code && <Check className="h-4 w-4 text-primary" />}
                   </button>
                 ))}
               </div>
@@ -88,6 +109,18 @@ export function Header() {
 
       {mobileOpen && (
         <div className="border-t bg-background px-4 pb-4 md:hidden">
+          {/* Mobile language selector */}
+          <div className="flex gap-1 border-b py-3">
+            {(Object.entries(languages) as [Language, string][]).map(([code, name]) => (
+              <button
+                key={code}
+                onClick={() => setLanguage(code)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${language === code ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+              >
+                <span>{langFlags[code]}</span> {name}
+              </button>
+            ))}
+          </div>
           <nav className="flex flex-col gap-1 pt-2">
             <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent">
               <ShoppingBag className="h-4 w-4" /> {t("nav.home")}

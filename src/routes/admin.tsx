@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, Edit } from "lucide-react";
+import { useState, useRef } from "react";
+import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStore, type Product } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 type AdminTab = "products" | "orders" | "users" | "payments";
+type ImageMode = "upload" | "url";
 
 function AdminPage() {
   const { t } = useI18n();
@@ -27,12 +28,32 @@ function AdminPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<AdminTab>("products");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [imageMode, setImageMode] = useState<ImageMode>("upload");
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newProduct, setNewProduct] = useState({ name: "", description: "", price: "", image: "", category: "phones" as Product["category"], stock: "" });
 
   if (!currentUser || currentUser.role !== "admin") {
     navigate({ to: "/login" });
     return null;
   }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setImagePreview(dataUrl);
+      setNewProduct((prev) => ({ ...prev, image: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUrlChange = (url: string) => {
+    setNewProduct((prev) => ({ ...prev, image: url }));
+    setImagePreview(url);
+  };
 
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.price) return;
@@ -45,6 +66,7 @@ function AdminPage() {
       stock: parseInt(newProduct.stock) || 10,
     });
     setNewProduct({ name: "", description: "", price: "", image: "", category: "phones", stock: "" });
+    setImagePreview("");
     setShowAddForm(false);
   };
 
@@ -59,7 +81,6 @@ function AdminPage() {
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-bold">{t("admin.title")}</h1>
 
-      {/* Tab nav */}
       <div className="mt-6 flex flex-wrap gap-2 border-b pb-4">
         {tabs.map(({ key, icon: Icon, label, count }) => (
           <button
@@ -75,7 +96,6 @@ function AdminPage() {
         ))}
       </div>
 
-      {/* Products Tab */}
       {tab === "products" && (
         <div className="mt-6">
           <div className="flex items-center justify-between">
@@ -87,20 +107,67 @@ function AdminPage() {
 
           {showAddForm && (
             <Card className="mt-4">
-              <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-1"><Label>Name</Label><Input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Price (RWF)</Label><Input type="number" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
-                <div className="space-y-1"><Label>Stock</Label><Input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })} /></div>
-                <div className="space-y-1 sm:col-span-2"><Label>Description</Label><Input value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} /></div>
-                <div className="space-y-1">
-                  <Label>Category</Label>
-                  <select value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as Product["category"] })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                    <option value="phones">Phones</option><option value="laptops">Laptops</option><option value="accessories">Accessories</option><option value="audio">Audio</option><option value="gaming">Gaming</option>
-                  </select>
+              <CardContent className="space-y-4 p-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-1"><Label>Name</Label><Input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /></div>
+                  <div className="space-y-1"><Label>Price (RWF)</Label><Input type="number" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
+                  <div className="space-y-1"><Label>Stock</Label><Input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })} /></div>
+                  <div className="space-y-1 sm:col-span-2"><Label>Description</Label><Input value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} /></div>
+                  <div className="space-y-1">
+                    <Label>Category</Label>
+                    <select value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as Product["category"] })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                      <option value="phones">Phones</option><option value="laptops">Laptops</option><option value="accessories">Accessories</option><option value="audio">Audio</option><option value="gaming">Gaming</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="flex items-end gap-2 sm:col-span-3">
+
+                {/* Image upload section */}
+                <div className="space-y-3">
+                  <Label>Product Image</Label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setImageMode("upload")}
+                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${imageMode === "upload" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                    >
+                      <ImagePlus className="h-4 w-4" /> Upload Image
+                    </button>
+                    <button
+                      onClick={() => setImageMode("url")}
+                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${imageMode === "url" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                    >
+                      <Link2 className="h-4 w-4" /> Image URL
+                    </button>
+                  </div>
+
+                  {imageMode === "upload" ? (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50"
+                    >
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" />
+                      ) : (
+                        <>
+                          <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
+                          <p className="mt-2 text-sm text-muted-foreground">Click to upload image</p>
+                          <p className="text-xs text-muted-foreground/70">JPG, PNG, WebP supported</p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Input placeholder="https://example.com/image.jpg" value={newProduct.image} onChange={(e) => handleUrlChange(e.target.value)} />
+                      {imagePreview && (
+                        <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" onError={() => setImagePreview("")} />
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
                   <Button onClick={handleAddProduct}>{t("common.save")}</Button>
-                  <Button variant="ghost" onClick={() => setShowAddForm(false)}>{t("common.cancel")}</Button>
+                  <Button variant="ghost" onClick={() => { setShowAddForm(false); setImagePreview(""); }}>{t("common.cancel")}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -112,7 +179,12 @@ function AdminPage() {
               <tbody>
                 {products.map((p) => (
                   <tr key={p.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3 font-medium">{p.name}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <img src={p.image} alt={p.name} className="h-10 w-10 rounded-md object-cover" />
+                        <span className="font-medium">{p.name}</span>
+                      </div>
+                    </td>
                     <td className="p-3"><Badge variant="secondary">{p.category}</Badge></td>
                     <td className="p-3">{p.price.toLocaleString()} RWF</td>
                     <td className="p-3">{p.stock}</td>
@@ -129,7 +201,6 @@ function AdminPage() {
         </div>
       )}
 
-      {/* Orders Tab */}
       {tab === "orders" && (
         <div className="mt-6 space-y-4">
           {orders.length === 0 ? (
@@ -139,7 +210,7 @@ function AdminPage() {
               <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
                 <div>
                   <CardTitle className="text-sm">{order.id}</CardTitle>
-                  <p className="text-xs text-muted-foreground">User: {order.userId} • {new Date(order.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">User: {order.userId} &middot; {new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
                 <Badge variant="outline" className={order.status === "pending" ? "border-warning/30 text-warning-foreground" : order.status === "paid" ? "border-success/30 text-success" : "border-primary/30 text-primary"}>
                   {order.status === "pending" && <Clock className="mr-1 h-3 w-3" />}
@@ -150,7 +221,7 @@ function AdminPage() {
               </CardHeader>
               <CardContent>
                 {order.products.map(({ product, quantity }) => (
-                  <div key={product.id} className="flex justify-between text-sm"><span>{product.name} × {quantity}</span><span>{(product.price * quantity).toLocaleString()} RWF</span></div>
+                  <div key={product.id} className="flex justify-between text-sm"><span>{product.name} &times; {quantity}</span><span>{(product.price * quantity).toLocaleString()} RWF</span></div>
                 ))}
                 <div className="mt-2 flex items-center justify-between border-t pt-2">
                   <span className="font-bold">{order.total.toLocaleString()} RWF</span>
@@ -166,7 +237,6 @@ function AdminPage() {
         </div>
       )}
 
-      {/* Users Tab */}
       {tab === "users" && (
         <div className="mt-6 overflow-x-auto">
           <table className="w-full text-sm">
@@ -185,7 +255,6 @@ function AdminPage() {
         </div>
       )}
 
-      {/* Payments Tab */}
       {tab === "payments" && (
         <div className="mt-6 space-y-4">
           {orders.filter((o) => o.paymentRef).length === 0 ? (
@@ -195,7 +264,7 @@ function AdminPage() {
               <CardContent className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-medium">{order.id}</p>
-                  <p className="text-xs text-muted-foreground">Phone: {order.paymentPhone} • Ref: {order.paymentRef}</p>
+                  <p className="text-xs text-muted-foreground">Phone: {order.paymentPhone} &middot; Ref: {order.paymentRef}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{order.total.toLocaleString()} RWF</p>
