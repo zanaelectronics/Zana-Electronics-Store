@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
-import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2 } from "lucide-react";
+import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStore, type Product } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -22,21 +22,33 @@ export const Route = createFileRoute("/admin")({
 type AdminTab = "products" | "orders" | "users" | "payments";
 type ImageMode = "upload" | "url";
 
-function AdminPage() {
-  const { t } = useI18n();
-  const { currentUser, products, orders, users, addProduct, deleteProduct, updateOrderStatus } = useStore();
-  const navigate = useNavigate();
-  const [tab, setTab] = useState<AdminTab>("products");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [imageMode, setImageMode] = useState<ImageMode>("upload");
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [newProduct, setNewProduct] = useState({ name: "", description: "", price: "", image: "", category: "phones" as Product["category"], stock: "" });
+interface ProductFormData {
+  name: string;
+  description: string;
+  price: string;
+  image: string;
+  category: Product["category"];
+  stock: string;
+}
 
-  if (!currentUser || currentUser.role !== "admin") {
-    navigate({ to: "/login" });
-    return null;
-  }
+const emptyForm: ProductFormData = { name: "", description: "", price: "", image: "", category: "phones", stock: "" };
+
+function ProductForm({
+  data,
+  onChange,
+  onSave,
+  onCancel,
+  saveLabel,
+}: {
+  data: ProductFormData;
+  onChange: (d: ProductFormData) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saveLabel: string;
+}) {
+  const [imageMode, setImageMode] = useState<ImageMode>("upload");
+  const [imagePreview, setImagePreview] = useState<string>(data.image);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,29 +57,117 @@ function AdminPage() {
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
       setImagePreview(dataUrl);
-      setNewProduct((prev) => ({ ...prev, image: dataUrl }));
+      onChange({ ...data, image: dataUrl });
     };
     reader.readAsDataURL(file);
   };
 
   const handleUrlChange = (url: string) => {
-    setNewProduct((prev) => ({ ...prev, image: url }));
+    onChange({ ...data, image: url });
     setImagePreview(url);
   };
 
-  const handleAddProduct = () => {
-    if (!newProduct.name || !newProduct.price) return;
+  return (
+    <Card className="mt-4">
+      <CardContent className="space-y-4 p-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-1"><Label>Name</Label><Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Price (RWF)</Label><Input type="number" value={data.price} onChange={(e) => onChange({ ...data, price: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Stock</Label><Input type="number" value={data.stock} onChange={(e) => onChange({ ...data, stock: e.target.value })} /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Description</Label><Input value={data.description} onChange={(e) => onChange({ ...data, description: e.target.value })} /></div>
+          <div className="space-y-1">
+            <Label>Category</Label>
+            <select value={data.category} onChange={(e) => onChange({ ...data, category: e.target.value as Product["category"] })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+              <option value="phones">Phones</option><option value="laptops">Laptops</option><option value="accessories">Accessories</option><option value="audio">Audio</option><option value="gaming">Gaming</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Product Image</Label>
+          <div className="flex gap-2">
+            <button onClick={() => setImageMode("upload")} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${imageMode === "upload" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+              <ImagePlus className="h-4 w-4" /> Upload
+            </button>
+            <button onClick={() => setImageMode("url")} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${imageMode === "url" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+              <Link2 className="h-4 w-4" /> URL
+            </button>
+          </div>
+          {imageMode === "upload" ? (
+            <div onClick={() => fileInputRef.current?.click()} className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" />
+              ) : (
+                <>
+                  <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
+                  <p className="mt-2 text-sm text-muted-foreground">Click to upload image</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Input placeholder="https://example.com/image.jpg" value={data.image} onChange={(e) => handleUrlChange(e.target.value)} />
+              {imagePreview && <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" onError={() => setImagePreview("")} />}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button onClick={onSave}>{saveLabel}</Button>
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AdminPage() {
+  const { t } = useI18n();
+  const { currentUser, products, orders, users, addProduct, deleteProduct, updateProduct, updateOrderStatus } = useStore();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<AdminTab>("products");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ProductFormData>(emptyForm);
+
+  if (!currentUser || currentUser.role !== "admin") {
+    navigate({ to: "/login" });
+    return null;
+  }
+
+  const handleAdd = () => {
+    if (!formData.name || !formData.price) return;
     addProduct({
-      name: newProduct.name,
-      description: newProduct.description,
-      price: parseInt(newProduct.price),
-      image: newProduct.image || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",
-      category: newProduct.category,
-      stock: parseInt(newProduct.stock) || 10,
+      name: formData.name,
+      description: formData.description,
+      price: parseInt(formData.price),
+      image: formData.image || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop",
+      category: formData.category,
+      stock: parseInt(formData.stock) || 10,
     });
-    setNewProduct({ name: "", description: "", price: "", image: "", category: "phones", stock: "" });
-    setImagePreview("");
+    setFormData(emptyForm);
     setShowAddForm(false);
+  };
+
+  const startEdit = (p: Product) => {
+    setEditingId(p.id);
+    setFormData({ name: p.name, description: p.description, price: String(p.price), image: p.image, category: p.category, stock: String(p.stock) });
+    setShowAddForm(false);
+  };
+
+  const handleEdit = () => {
+    if (!editingId || !formData.name || !formData.price) return;
+    updateProduct(editingId, {
+      name: formData.name,
+      description: formData.description,
+      price: parseInt(formData.price),
+      image: formData.image,
+      category: formData.category,
+      stock: parseInt(formData.stock) || 0,
+    });
+    setEditingId(null);
+    setFormData(emptyForm);
   };
 
   const tabs: { key: AdminTab; icon: typeof Package; label: string; count: number }[] = [
@@ -100,77 +200,17 @@ function AdminPage() {
         <div className="mt-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t("admin.products")}</h2>
-            <Button size="sm" onClick={() => setShowAddForm(!showAddForm)}>
+            <Button size="sm" onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setFormData(emptyForm); }}>
               <Plus className="mr-1 h-4 w-4" /> {t("admin.addProduct")}
             </Button>
           </div>
 
           {showAddForm && (
-            <Card className="mt-4">
-              <CardContent className="space-y-4 p-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-1"><Label>Name</Label><Input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /></div>
-                  <div className="space-y-1"><Label>Price (RWF)</Label><Input type="number" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} /></div>
-                  <div className="space-y-1"><Label>Stock</Label><Input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })} /></div>
-                  <div className="space-y-1 sm:col-span-2"><Label>Description</Label><Input value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} /></div>
-                  <div className="space-y-1">
-                    <Label>Category</Label>
-                    <select value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value as Product["category"] })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                      <option value="phones">Phones</option><option value="laptops">Laptops</option><option value="accessories">Accessories</option><option value="audio">Audio</option><option value="gaming">Gaming</option>
-                    </select>
-                  </div>
-                </div>
+            <ProductForm data={formData} onChange={setFormData} onSave={handleAdd} onCancel={() => { setShowAddForm(false); setFormData(emptyForm); }} saveLabel={t("admin.addProduct")} />
+          )}
 
-                {/* Image upload section */}
-                <div className="space-y-3">
-                  <Label>Product Image</Label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setImageMode("upload")}
-                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${imageMode === "upload" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
-                    >
-                      <ImagePlus className="h-4 w-4" /> Upload Image
-                    </button>
-                    <button
-                      onClick={() => setImageMode("url")}
-                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${imageMode === "url" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
-                    >
-                      <Link2 className="h-4 w-4" /> Image URL
-                    </button>
-                  </div>
-
-                  {imageMode === "upload" ? (
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50"
-                    >
-                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                      {imagePreview ? (
-                        <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" />
-                      ) : (
-                        <>
-                          <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
-                          <p className="mt-2 text-sm text-muted-foreground">Click to upload image</p>
-                          <p className="text-xs text-muted-foreground/70">JPG, PNG, WebP supported</p>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Input placeholder="https://example.com/image.jpg" value={newProduct.image} onChange={(e) => handleUrlChange(e.target.value)} />
-                      {imagePreview && (
-                        <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" onError={() => setImagePreview("")} />
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button onClick={handleAddProduct}>{t("common.save")}</Button>
-                  <Button variant="ghost" onClick={() => { setShowAddForm(false); setImagePreview(""); }}>{t("common.cancel")}</Button>
-                </div>
-              </CardContent>
-            </Card>
+          {editingId && (
+            <ProductForm data={formData} onChange={setFormData} onSave={handleEdit} onCancel={() => { setEditingId(null); setFormData(emptyForm); }} saveLabel={t("common.save")} />
           )}
 
           <div className="mt-4 overflow-x-auto">
@@ -178,7 +218,7 @@ function AdminPage() {
               <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Product</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Stock</th><th className="p-3">Actions</th></tr></thead>
               <tbody>
                 {products.map((p) => (
-                  <tr key={p.id} className="border-b hover:bg-muted/50">
+                  <tr key={p.id} className={`border-b hover:bg-muted/50 ${editingId === p.id ? "bg-primary/5" : ""}`}>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
                         <img src={p.image} alt={p.name} className="h-10 w-10 rounded-md object-cover" />
@@ -189,9 +229,14 @@ function AdminPage() {
                     <td className="p-3">{p.price.toLocaleString()} RWF</td>
                     <td className="p-3">{p.stock}</td>
                     <td className="p-3">
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
