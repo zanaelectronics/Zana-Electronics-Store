@@ -53,7 +53,7 @@ function Index() {
             { icon: Truck, title: "Fast Delivery", desc: "1-5 days across Rwanda" },
             { icon: CreditCard, title: "MTN MoMo Pay", desc: "Secure mobile payments" },
             { icon: Shield, title: "Genuine Products", desc: "100% authentic items" },
-            { icon: Headphones, title: "24/7 Support", desc: "Always here to help" },
+            { icon: Headphones, title: "24/7 Support", desc: "ZANA AI assistant ready" },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

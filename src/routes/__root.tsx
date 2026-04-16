@@ -4,6 +4,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { StoreProvider } from "@/lib/store";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { HelpChat } from "@/components/HelpChat";
 
 function NotFoundComponent() {
   return (
@@ -32,9 +33,9 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ZANA — Premium Electronics Store | Rwanda" },
+      { title: "ZANA — Electronics Store | Rwanda" },
       { name: "description", content: "Shop the latest electronics with fast delivery across Rwanda. Pay securely with MTN MoMo." },
-      { property: "og:title", content: "ZANA — Premium Electronics Store" },
+      { property: "og:title", content: "ZANA — Electronics Store" },
       { property: "og:description", content: "Shop the latest electronics with fast delivery across Rwanda." },
       { property: "og:type", content: "website" },
     ],
@@ -72,6 +73,7 @@ function RootComponent() {
             <Outlet />
           </main>
           <Footer />
+          <HelpChat />
         </div>
       </StoreProvider>
     </I18nProvider>
