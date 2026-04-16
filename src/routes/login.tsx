@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -25,21 +25,24 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
     }
-    const ok = login(email, password);
-    if (!ok) {
-      setError("Invalid credentials. Try admin@zana.rw with any password.");
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
+    if (result.error) {
+      setError(result.error);
       return;
     }
     if (pendingOrderProduct) {
-      addOrder([{ product: pendingOrderProduct, quantity: 1 }]);
+      await addOrder([{ product: pendingOrderProduct, quantity: 1 }]);
       setPendingOrderProduct(null);
     }
     navigate({ to: "/dashboard" });
@@ -69,7 +72,7 @@ function LoginPage() {
             )}
             <div className="space-y-2">
               <Label htmlFor="email">{t("auth.email")}</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@zana.rw" />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t("auth.password")}</Label>
@@ -77,7 +80,9 @@ function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full">{t("auth.login")}</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</> : t("auth.login")}
+            </Button>
             <p className="text-sm text-muted-foreground">
               {t("auth.noAccount")}{" "}
               <Link to="/register" className="font-medium text-primary hover:underline">{t("auth.register")}</Link>

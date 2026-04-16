@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -27,21 +27,30 @@ function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     if (!name || !email || !phone || !password) {
       setError("Please fill in all fields");
       return;
     }
-    const ok = register(name, email, phone, password);
-    if (!ok) {
-      setError("Email already registered");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    setLoading(true);
+    const result = await register(name, email, phone, password);
+    setLoading(false);
+    if (result.error) {
+      setError(result.error);
       return;
     }
     if (pendingOrderProduct) {
-      addOrder([{ product: pendingOrderProduct, quantity: 1 }]);
+      // Small delay to let profile creation trigger complete
+      await new Promise(r => setTimeout(r, 500));
+      await addOrder([{ product: pendingOrderProduct, quantity: 1 }]);
       setPendingOrderProduct(null);
     }
     navigate({ to: "/dashboard" });
@@ -79,7 +88,9 @@ function RegisterPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full">{t("auth.register")}</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</> : t("auth.register")}
+            </Button>
             <p className="text-sm text-muted-foreground">
               {t("auth.hasAccount")}{" "}
               <Link to="/login" className="font-medium text-primary hover:underline">{t("auth.login")}</Link>

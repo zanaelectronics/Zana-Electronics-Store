@@ -14,13 +14,12 @@ const langFlags: Record<Language, string> = {
 
 export function Header() {
   const { t, language, setLanguage, languages } = useI18n();
-  const { currentUser, logout } = useStore();
+  const { currentUser, userProfile, logout } = useStore();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
-  // Close lang dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (langRef.current && !langRef.current.contains(e.target as Node)) {
@@ -30,6 +29,14 @@ export function Header() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  const isAdmin = userProfile?.role === "admin";
+  const displayName = userProfile?.display_name || currentUser?.email?.split("@")[0] || "";
+
+  const handleLogout = async () => {
+    await logout();
+    navigate({ to: "/" });
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -51,7 +58,7 @@ export function Header() {
               {t("nav.dashboard")}
             </Link>
           )}
-          {currentUser?.role === "admin" && (
+          {isAdmin && (
             <Link to="/admin" className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "!text-foreground bg-secondary" }}>
               {t("nav.admin")}
             </Link>
@@ -59,7 +66,6 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Language selector */}
           <div className="relative" ref={langRef}>
             <Button variant="ghost" size="sm" onClick={() => setLangOpen(!langOpen)} className="gap-1.5 text-muted-foreground">
               <span className="text-base leading-none">{langFlags[language]}</span>
@@ -84,8 +90,8 @@ export function Header() {
 
           {currentUser ? (
             <div className="hidden items-center gap-2 md:flex">
-              <span className="text-sm text-muted-foreground">{currentUser.name}</span>
-              <Button variant="ghost" size="sm" onClick={() => { logout(); navigate({ to: "/" }); }}>
+              <span className="text-sm text-muted-foreground">{displayName}</span>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="mr-1 h-4 w-4" />
                 {t("nav.logout")}
               </Button>
@@ -109,7 +115,6 @@ export function Header() {
 
       {mobileOpen && (
         <div className="border-t bg-background px-4 pb-4 md:hidden">
-          {/* Mobile language selector */}
           <div className="flex gap-1 border-b py-3">
             {(Object.entries(languages) as [Language, string][]).map(([code, name]) => (
               <button
@@ -133,13 +138,13 @@ export function Header() {
                 <LayoutDashboard className="h-4 w-4" /> {t("nav.dashboard")}
               </Link>
             )}
-            {currentUser?.role === "admin" && (
+            {isAdmin && (
               <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent">
                 <Shield className="h-4 w-4" /> {t("nav.admin")}
               </Link>
             )}
             {currentUser ? (
-              <button onClick={() => { logout(); navigate({ to: "/" }); setMobileOpen(false); }} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
+              <button onClick={() => { handleLogout(); setMobileOpen(false); }} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10">
                 <LogOut className="h-4 w-4" /> {t("nav.logout")}
               </button>
             ) : (

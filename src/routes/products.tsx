@@ -27,7 +27,7 @@ function ProductsPage() {
   const [category, setCategory] = useState<string>("all");
 
   const filtered = products.filter((p) => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || "").toLowerCase().includes(search.toLowerCase());
     const matchCategory = category === "all" || p.category === category;
     return matchSearch && matchCategory;
   });

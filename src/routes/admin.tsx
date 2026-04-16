@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
-import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, X } from "lucide-react";
+import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStore, type Product } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -34,17 +34,9 @@ interface ProductFormData {
 const emptyForm: ProductFormData = { name: "", description: "", price: "", image: "", category: "phones", stock: "" };
 
 function ProductForm({
-  data,
-  onChange,
-  onSave,
-  onCancel,
-  saveLabel,
+  data, onChange, onSave, onCancel, saveLabel,
 }: {
-  data: ProductFormData;
-  onChange: (d: ProductFormData) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  saveLabel: string;
+  data: ProductFormData; onChange: (d: ProductFormData) => void; onSave: () => void; onCancel: () => void; saveLabel: string;
 }) {
   const [imageMode, setImageMode] = useState<ImageMode>("upload");
   const [imagePreview, setImagePreview] = useState<string>(data.image);
@@ -82,7 +74,6 @@ function ProductForm({
             </select>
           </div>
         </div>
-
         <div className="space-y-3">
           <Label>Product Image</Label>
           <div className="flex gap-2">
@@ -96,14 +87,7 @@ function ProductForm({
           {imageMode === "upload" ? (
             <div onClick={() => fileInputRef.current?.click()} className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50">
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" />
-              ) : (
-                <>
-                  <ImagePlus className="h-10 w-10 text-muted-foreground/50" />
-                  <p className="mt-2 text-sm text-muted-foreground">Click to upload image</p>
-                </>
-              )}
+              {imagePreview ? <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" /> : <><ImagePlus className="h-10 w-10 text-muted-foreground/50" /><p className="mt-2 text-sm text-muted-foreground">Click to upload image</p></>}
             </div>
           ) : (
             <div className="space-y-2">
@@ -112,7 +96,6 @@ function ProductForm({
             </div>
           )}
         </div>
-
         <div className="flex items-center gap-2">
           <Button onClick={onSave}>{saveLabel}</Button>
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
@@ -124,21 +107,29 @@ function ProductForm({
 
 function AdminPage() {
   const { t } = useI18n();
-  const { currentUser, products, orders, users, addProduct, deleteProduct, updateProduct, updateOrderStatus } = useStore();
+  const { currentUser, userProfile, products, allOrders, allProfiles, addProduct, deleteProduct, updateProduct, updateOrderStatus, loading } = useStore();
   const navigate = useNavigate();
   const [tab, setTab] = useState<AdminTab>("products");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
 
-  if (!currentUser || currentUser.role !== "admin") {
+  if (!loading && (!currentUser || userProfile?.role !== "admin")) {
     navigate({ to: "/login" });
     return null;
   }
 
-  const handleAdd = () => {
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const handleAdd = async () => {
     if (!formData.name || !formData.price) return;
-    addProduct({
+    await addProduct({
       name: formData.name,
       description: formData.description,
       price: parseInt(formData.price),
@@ -152,13 +143,13 @@ function AdminPage() {
 
   const startEdit = (p: Product) => {
     setEditingId(p.id);
-    setFormData({ name: p.name, description: p.description, price: String(p.price), image: p.image, category: p.category, stock: String(p.stock) });
+    setFormData({ name: p.name, description: p.description || "", price: String(p.price), image: p.image || "", category: p.category, stock: String(p.stock) });
     setShowAddForm(false);
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editingId || !formData.name || !formData.price) return;
-    updateProduct(editingId, {
+    await updateProduct(editingId, {
       name: formData.name,
       description: formData.description,
       price: parseInt(formData.price),
@@ -172,24 +163,17 @@ function AdminPage() {
 
   const tabs: { key: AdminTab; icon: typeof Package; label: string; count: number }[] = [
     { key: "products", icon: Package, label: t("admin.products"), count: products.length },
-    { key: "orders", icon: ShoppingCart, label: t("admin.orders"), count: orders.length },
-    { key: "users", icon: Users, label: t("admin.users"), count: users.length },
-    { key: "payments", icon: CreditCard, label: t("admin.payments"), count: orders.filter((o) => o.status === "paid").length },
+    { key: "orders", icon: ShoppingCart, label: t("admin.orders"), count: allOrders.length },
+    { key: "users", icon: Users, label: t("admin.users"), count: allProfiles.length },
+    { key: "payments", icon: CreditCard, label: t("admin.payments"), count: allOrders.filter((o) => o.status === "paid").length },
   ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-bold">{t("admin.title")}</h1>
-
       <div className="mt-6 flex flex-wrap gap-2 border-b pb-4">
         {tabs.map(({ key, icon: Icon, label, count }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              tab === key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            }`}
-          >
+          <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
             <Icon className="h-4 w-4" /> {label}
             <span className="rounded-full bg-background/20 px-2 py-0.5 text-xs">{count}</span>
           </button>
@@ -204,38 +188,22 @@ function AdminPage() {
               <Plus className="mr-1 h-4 w-4" /> {t("admin.addProduct")}
             </Button>
           </div>
-
-          {showAddForm && (
-            <ProductForm data={formData} onChange={setFormData} onSave={handleAdd} onCancel={() => { setShowAddForm(false); setFormData(emptyForm); }} saveLabel={t("admin.addProduct")} />
-          )}
-
-          {editingId && (
-            <ProductForm data={formData} onChange={setFormData} onSave={handleEdit} onCancel={() => { setEditingId(null); setFormData(emptyForm); }} saveLabel={t("common.save")} />
-          )}
-
+          {showAddForm && <ProductForm data={formData} onChange={setFormData} onSave={handleAdd} onCancel={() => { setShowAddForm(false); setFormData(emptyForm); }} saveLabel={t("admin.addProduct")} />}
+          {editingId && <ProductForm data={formData} onChange={setFormData} onSave={handleEdit} onCancel={() => { setEditingId(null); setFormData(emptyForm); }} saveLabel={t("common.save")} />}
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Product</th><th className="p-3">Category</th><th className="p-3">Price</th><th className="p-3">Stock</th><th className="p-3">Actions</th></tr></thead>
               <tbody>
                 {products.map((p) => (
                   <tr key={p.id} className={`border-b hover:bg-muted/50 ${editingId === p.id ? "bg-primary/5" : ""}`}>
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <img src={p.image} alt={p.name} className="h-10 w-10 rounded-md object-cover" />
-                        <span className="font-medium">{p.name}</span>
-                      </div>
-                    </td>
+                    <td className="p-3"><div className="flex items-center gap-3"><img src={p.image || ""} alt={p.name} className="h-10 w-10 rounded-md object-cover" /><span className="font-medium">{p.name}</span></div></td>
                     <td className="p-3"><Badge variant="secondary">{p.category}</Badge></td>
                     <td className="p-3">{p.price.toLocaleString()} RWF</td>
                     <td className="p-3">{p.stock}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => startEdit(p)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => deleteProduct(p.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </td>
                   </tr>
@@ -248,14 +216,14 @@ function AdminPage() {
 
       {tab === "orders" && (
         <div className="mt-6 space-y-4">
-          {orders.length === 0 ? (
+          {allOrders.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">No orders yet</div>
-          ) : orders.map((order) => (
+          ) : allOrders.map((order) => (
             <Card key={order.id}>
               <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
                 <div>
-                  <CardTitle className="text-sm">{order.id}</CardTitle>
-                  <p className="text-xs text-muted-foreground">User: {order.userId} &middot; {new Date(order.createdAt).toLocaleDateString()}</p>
+                  <CardTitle className="text-sm">#{order.id.slice(0, 8)}</CardTitle>
+                  <p className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
                 <Badge variant="outline" className={order.status === "pending" ? "border-warning/30 text-warning-foreground" : order.status === "paid" ? "border-success/30 text-success" : "border-primary/30 text-primary"}>
                   {order.status === "pending" && <Clock className="mr-1 h-3 w-3" />}
@@ -265,8 +233,8 @@ function AdminPage() {
                 </Badge>
               </CardHeader>
               <CardContent>
-                {order.products.map(({ product, quantity }) => (
-                  <div key={product.id} className="flex justify-between text-sm"><span>{product.name} &times; {quantity}</span><span>{(product.price * quantity).toLocaleString()} RWF</span></div>
+                {order.items?.map((item) => (
+                  <div key={item.product_id} className="flex justify-between text-sm"><span>{item.product?.name || "Product"} × {item.quantity}</span><span>{(item.price * item.quantity).toLocaleString()} RWF</span></div>
                 ))}
                 <div className="mt-2 flex items-center justify-between border-t pt-2">
                   <span className="font-bold">{order.total.toLocaleString()} RWF</span>
@@ -285,14 +253,12 @@ function AdminPage() {
       {tab === "users" && (
         <div className="mt-6 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Name</th><th className="p-3">Email</th><th className="p-3">Phone</th><th className="p-3">Role</th></tr></thead>
+            <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Name</th><th className="p-3">Phone</th></tr></thead>
             <tbody>
-              {users.map((u) => (
+              {allProfiles.map((u) => (
                 <tr key={u.id} className="border-b hover:bg-muted/50">
-                  <td className="p-3 font-medium">{u.name}</td>
-                  <td className="p-3">{u.email}</td>
-                  <td className="p-3">{u.phone}</td>
-                  <td className="p-3"><Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge></td>
+                  <td className="p-3 font-medium">{u.display_name || "—"}</td>
+                  <td className="p-3">{u.phone || "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -302,14 +268,14 @@ function AdminPage() {
 
       {tab === "payments" && (
         <div className="mt-6 space-y-4">
-          {orders.filter((o) => o.paymentRef).length === 0 ? (
+          {allOrders.filter((o) => o.payment_ref).length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">No payments recorded yet</div>
-          ) : orders.filter((o) => o.paymentRef).map((order) => (
+          ) : allOrders.filter((o) => o.payment_ref).map((order) => (
             <Card key={order.id}>
               <CardContent className="flex items-center justify-between p-4">
                 <div>
-                  <p className="font-medium">{order.id}</p>
-                  <p className="text-xs text-muted-foreground">Phone: {order.paymentPhone} &middot; Ref: {order.paymentRef}</p>
+                  <p className="font-medium">#{order.id.slice(0, 8)}</p>
+                  <p className="text-xs text-muted-foreground">Phone: {order.payment_phone} · Ref: {order.payment_ref}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{order.total.toLocaleString()} RWF</p>

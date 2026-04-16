@@ -10,13 +10,13 @@ export function ProductCard({ product }: { product: Product }) {
   const { currentUser, setPendingOrderProduct, addOrder } = useStore();
   const navigate = useNavigate();
 
-  const handleOrder = () => {
+  const handleOrder = async () => {
     if (!currentUser) {
       setPendingOrderProduct(product);
       navigate({ to: "/login" });
       return;
     }
-    addOrder([{ product, quantity: 1 }]);
+    await addOrder([{ product, quantity: 1 }]);
     navigate({ to: "/dashboard" });
   };
 
@@ -28,7 +28,7 @@ export function ProductCard({ product }: { product: Product }) {
     >
       <div className="aspect-square overflow-hidden bg-muted">
         <img
-          src={product.image}
+          src={product.image || "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop"}
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           loading="lazy"
