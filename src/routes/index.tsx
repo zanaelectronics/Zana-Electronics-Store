@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
+import heroBg from "@/assets/hero-bg.jpg";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -18,8 +19,16 @@ function Index() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-32">
+      <section className="relative overflow-hidden">
+        <img
+          src={heroBg}
+          alt="ZANA Electronics"
+          width={1920}
+          height={1080}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/40" />
+        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-32">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
