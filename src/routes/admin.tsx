@@ -42,18 +42,27 @@ function ProductForm({
 }) {
   const [imageMode, setImageMode] = useState<ImageMode>("upload");
   const [imagePreview, setImagePreview] = useState<string>(data.image);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setImagePreview(dataUrl);
-      onChange({ ...data, image: dataUrl });
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+      setImagePreview(pub.publicUrl);
+      onChange({ ...data, image: pub.publicUrl });
+      toast.success("Image uploaded");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleUrlChange = (url: string) => {
