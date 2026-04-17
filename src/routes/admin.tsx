@@ -3,6 +3,8 @@ import { useState, useRef } from "react";
 import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStore, type Product } from "@/lib/store";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,18 +42,27 @@ function ProductForm({
 }) {
   const [imageMode, setImageMode] = useState<ImageMode>("upload");
   const [imagePreview, setImagePreview] = useState<string>(data.image);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setImagePreview(dataUrl);
-      onChange({ ...data, image: dataUrl });
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+      setImagePreview(pub.publicUrl);
+      onChange({ ...data, image: pub.publicUrl });
+      toast.success("Image uploaded");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleUrlChange = (url: string) => {
@@ -85,9 +96,9 @@ function ProductForm({
             </button>
           </div>
           {imageMode === "upload" ? (
-            <div onClick={() => fileInputRef.current?.click()} className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50">
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-              {imagePreview ? <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" /> : <><ImagePlus className="h-10 w-10 text-muted-foreground/50" /><p className="mt-2 text-sm text-muted-foreground">Click to upload image</p></>}
+            <div onClick={() => !uploading && fileInputRef.current?.click()} className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={uploading} />
+              {uploading ? <Loader2 className="h-10 w-10 animate-spin text-primary" /> : imagePreview ? <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" /> : <><ImagePlus className="h-10 w-10 text-muted-foreground/50" /><p className="mt-2 text-sm text-muted-foreground">Click to upload image</p></>}
             </div>
           ) : (
             <div className="space-y-2">
