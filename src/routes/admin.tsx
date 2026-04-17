@@ -107,7 +107,7 @@ function ProductForm({
           </div>
           {imageMode === "upload" ? (
             <div onClick={() => !uploading && fileInputRef.current?.click()} className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50">
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={uploading} />
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" disabled={uploading} />
               {uploading ? <Loader2 className="h-10 w-10 animate-spin text-primary" /> : imagePreview ? <img src={imagePreview} alt="Preview" className="h-32 w-32 rounded-lg object-cover" /> : <><ImagePlus className="h-10 w-10 text-muted-foreground/50" /><p className="mt-2 text-sm text-muted-foreground">Click to upload image</p></>}
             </div>
           ) : (
@@ -121,7 +121,12 @@ function ProductForm({
           <Button onClick={onSave}>{saveLabel}</Button>
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
         </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={onSave}>{saveLabel}</Button>
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        </div>
       </CardContent>
+      <ImageCropDialog open={!!cropSrc} imageSrc={cropSrc || ""} onCancel={() => setCropSrc(null)} onConfirm={handleCropConfirm} />
     </Card>
   );
 }
