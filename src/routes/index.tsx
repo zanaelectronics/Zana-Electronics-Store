@@ -26,10 +26,7 @@ function Index() {
             transition={{ duration: 0.6 }}
             className="max-w-2xl"
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Shield className="h-3 w-3" /> Trusted in Rwanda
-            </span>
-            <h1 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-6xl">
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
               {t("hero.title")}
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
