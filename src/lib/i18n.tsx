@@ -12,7 +12,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.admin": "Admin",
     "nav.logout": "Logout",
     "nav.cart": "Cart",
-    "hero.title": "Premium Electronics Store",
+    "hero.title": "Zana Electronics Store",
     "hero.subtitle": "Discover the latest gadgets and electronics with fast delivery across Rwanda",
     "hero.cta": "Shop Now",
     "products.title": "Our Products",
