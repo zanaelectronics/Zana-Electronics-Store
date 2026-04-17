@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
+import heroBg from "@/assets/hero-bg.jpg";
 
 export const Route = createFileRoute("/")({
   component: Index,
