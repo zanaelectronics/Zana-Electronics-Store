@@ -139,6 +139,7 @@ function AdminPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   if (!loading && (!currentUser || userProfile?.role !== "admin")) {
     navigate({ to: "/login" });
@@ -210,10 +211,16 @@ function AdminPage() {
         <div className="mt-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t("admin.products")}</h2>
-            <Button size="sm" onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setFormData(emptyForm); }}>
-              <Plus className="mr-1 h-4 w-4" /> {t("admin.addProduct")}
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setShowBulkUpload(!showBulkUpload)}>
+                <Upload className="mr-1 h-4 w-4" /> Bulk upload
+              </Button>
+              <Button size="sm" onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setFormData(emptyForm); }}>
+                <Plus className="mr-1 h-4 w-4" /> {t("admin.addProduct")}
+              </Button>
+            </div>
           </div>
+          {showBulkUpload && <BulkImageUploader products={products} onClose={() => setShowBulkUpload(false)} />}
           {showAddForm && <ProductForm data={formData} onChange={setFormData} onSave={handleAdd} onCancel={() => { setShowAddForm(false); setFormData(emptyForm); }} saveLabel={t("admin.addProduct")} />}
           {editingId && <ProductForm data={formData} onChange={setFormData} onSave={handleEdit} onCancel={() => { setEditingId(null); setFormData(emptyForm); }} saveLabel={t("common.save")} />}
           <div className="mt-4 overflow-x-auto">
