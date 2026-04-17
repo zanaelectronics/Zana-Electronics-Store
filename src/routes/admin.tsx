@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
-import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, Loader2 } from "lucide-react";
+import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, Loader2, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStore, type Product } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
+import { BulkImageUploader } from "@/components/BulkImageUploader";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
