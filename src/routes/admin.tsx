@@ -45,43 +45,29 @@ function ProductForm({
   const [imageMode, setImageMode] = useState<ImageMode>("upload");
   const [imagePreview, setImagePreview] = useState<string>(data.image);
   const [uploading, setUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const cropToSquare = (file: File): Promise<Blob> =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        const size = Math.min(img.width, img.height);
-        const sx = (img.width - size) / 2;
-        const sy = (img.height - size) / 2;
-        const target = 600;
-        const canvas = document.createElement("canvas");
-        canvas.width = target;
-        canvas.height = target;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject(new Error("Canvas not supported"));
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, target, target);
-        URL.revokeObjectURL(url);
-        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Crop failed"))), "image/jpeg", 0.9);
-      };
-      img.onerror = () => reject(new Error("Image load failed"));
-      img.src = url;
-    });
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
+    setCropSrc(null);
     setUploading(true);
     try {
-      const blob = await cropToSquare(file);
       const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
       const { error } = await supabase.storage.from("product-images").upload(path, blob, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
       if (error) throw error;
       const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
       setImagePreview(pub.publicUrl);
       onChange({ ...data, image: pub.publicUrl });
-      toast.success("Image uploaded (cropped to square)");
+      toast.success("Image uploaded");
     } catch (err: any) {
       toast.error(err.message || "Upload failed");
     } finally {
