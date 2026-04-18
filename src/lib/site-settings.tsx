@@ -62,6 +62,13 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
 export function useSiteSettings() {
   const c = useContext(Ctx);
-  if (!c) throw new Error("useSiteSettings must be used within SiteSettingsProvider");
+  if (!c) {
+    return {
+      settings: defaults,
+      loading: false,
+      refresh: async () => {},
+      update: async () => ({ error: "Provider not mounted" }),
+    } as SiteSettingsContext;
+  }
   return c;
 }
