@@ -59,6 +59,8 @@ interface StoreContextType {
   setPendingOrderProduct: (product: Product | null) => void;
   refreshProducts: () => Promise<void>;
   refreshOrders: () => Promise<void>;
+  refreshProfiles: () => Promise<void>;
+  setUserRole: (userId: string, role: "admin" | "moderator" | "user") => Promise<{ error?: string }>;
   allOrders: Order[];
   allProfiles: UserProfile[];
 }
@@ -129,14 +131,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchAllProfiles = useCallback(async () => {
-    const { data } = await supabase.from("profiles").select("*");
-    if (data) {
-      setAllProfiles(data.map((p: any) => ({
+    const [{ data: profiles }, { data: roles }] = await Promise.all([
+      supabase.from("profiles").select("*"),
+      supabase.from("user_roles").select("user_id, role"),
+    ]);
+    if (profiles) {
+      const roleMap = new Map<string, "admin" | "moderator" | "user">();
+      for (const r of roles ?? []) roleMap.set(r.user_id, r.role as any);
+      setAllProfiles(profiles.map((p: any) => ({
         id: p.id,
         user_id: p.user_id,
         display_name: p.display_name,
         phone: p.phone,
-        role: "user",
+        role: roleMap.get(p.user_id) || "user",
       })));
     }
   }, []);
@@ -263,6 +270,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await fetchProducts();
   }, [fetchProducts]);
 
+  const setUserRole = useCallback(async (userId: string, role: "admin" | "moderator" | "user") => {
+    // Delete existing roles for that user, then insert the new one
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+    if (error) return { error: error.message };
+    await fetchAllProfiles();
+    return {};
+  }, [fetchAllProfiles]);
+
   return (
     <StoreContext.Provider
       value={{
@@ -271,6 +287,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         processPayment, addProduct, updateProduct, deleteProduct,
         pendingOrderProduct, setPendingOrderProduct,
         refreshProducts: fetchProducts, refreshOrders: fetchOrders,
+        refreshProfiles: fetchAllProfiles, setUserRole,
         allOrders, allProfiles,
       }}
     >

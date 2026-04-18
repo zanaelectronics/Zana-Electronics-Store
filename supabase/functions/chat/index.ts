@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -11,7 +12,44 @@ serve(async (req) => {
   try {
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Pull live products + admin-editable settings to give the AI fresh context
+    const [{ data: products }, { data: settingsRows }] = await Promise.all([
+      supabase.from("products").select("name, description, price, category, stock"),
+      supabase.from("site_settings").select("key, value"),
+    ]);
+
+    const settingsMap: Record<string, any> = {};
+    for (const row of settingsRows ?? []) settingsMap[row.key] = row.value;
+
+    const adminPrompt = settingsMap.ai?.systemPrompt ||
+      "You are ZANA Assistant, a friendly helper for ZANA Electronics in Rwanda.";
+
+    const productList = (products ?? []).slice(0, 50).map((p: any) =>
+      `- ${p.name} (${p.category}) — ${p.price.toLocaleString()} RWF, stock: ${p.stock}${p.description ? ` — ${p.description}` : ""}`
+    ).join("\n");
+
+    const contact = settingsMap.contact || {};
+    const delivery = settingsMap.delivery || {};
+    const payment = settingsMap.payment || {};
+
+    const systemContent = `${adminPrompt}
+
+# Live store information
+
+Contact: ${contact.email || "info@zana.rw"} · ${contact.phone || "+250 780 000 000"} · ${contact.address || "Kigali, Rwanda"}
+Delivery: ${delivery.kigali || ""} | ${delivery.provinces || ""} | Free over ${(delivery.freeThreshold ?? 100000).toLocaleString()} RWF
+Payment: ${payment.provider || "MTN MoMo Pay"} (${payment.momoNumber || ""})
+
+# Current catalog (${products?.length ?? 0} products)
+${productList || "(No products yet)"}
+
+Always answer in the language the user writes in. Prices are RWF. Be concise.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -21,23 +59,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are ZANA, a friendly AI assistant for ZANA Electronics — an online electronics store in Rwanda. You help customers with:
-- Product information (phones, laptops, audio, gaming, accessories)
-- Order status and tracking
-- Payment via MTN MoMo Pay
-- Delivery information (1-5 days across Rwanda)
-- Account issues
-- Returns and warranties
-
-Be helpful, concise, and friendly. Prices are in RWF (Rwandan Francs). 
-If you don't know something specific about an order, suggest the customer check their dashboard or contact support.
-Respond in the same language the customer writes in (English, Kinyarwanda, Swahili, or Chinese).`,
-          },
-          ...messages,
-        ],
+        messages: [{ role: "system", content: systemContent }, ...messages],
         stream: true,
       }),
     });
@@ -45,21 +67,18 @@ Respond in the same language the customer writes in (English, Kinyarwanda, Swahi
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limits exceeded, please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Service temporarily unavailable." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -69,8 +88,7 @@ Respond in the same language the customer writes in (English, Kinyarwanda, Swahi
   } catch (e) {
     console.error("chat error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

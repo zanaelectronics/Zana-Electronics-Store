@@ -3,6 +3,7 @@ import { ArrowRight, Shield, Truck, CreditCard, Headphones } from "lucide-react"
 import { motion } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { useSiteSettings } from "@/lib/site-settings";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -14,14 +15,16 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { t } = useI18n();
   const { products } = useStore();
+  const { settings } = useSiteSettings();
   const featured = products.slice(0, 4);
+  const heroImage = settings.hero.useDefaultImage || !settings.hero.image ? heroBg : settings.hero.image;
 
   return (
     <>
       {/* Hero */}
       <section className="relative overflow-hidden">
         <img
-          src={heroBg}
+          src={heroImage}
           alt="ZANA Electronics"
           width={1920}
           height={1080}

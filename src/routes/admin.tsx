@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
-import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, Loader2, Upload } from "lucide-react";
+import { Package, ShoppingCart, Users, CreditCard, Plus, Trash2, CheckCircle2, Clock, Truck, ImagePlus, Link2, Pencil, Loader2, Upload, Settings, Bot } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStore, type Product } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { BulkImageUploader } from "@/components/BulkImageUploader";
+import { AdminUsersTab } from "@/components/admin/AdminUsersTab";
+import { AdminSettingsTab } from "@/components/admin/AdminSettingsTab";
+import { AdminAssistantTab } from "@/components/admin/AdminAssistantTab";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -23,7 +26,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type AdminTab = "products" | "orders" | "users" | "payments";
+type AdminTab = "products" | "orders" | "users" | "payments" | "settings" | "assistant";
 type ImageMode = "upload" | "url";
 
 interface ProductFormData {
@@ -121,10 +124,6 @@ function ProductForm({
           <Button onClick={onSave}>{saveLabel}</Button>
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={onSave}>{saveLabel}</Button>
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        </div>
       </CardContent>
       <ImageCropDialog open={!!cropSrc} imageSrc={cropSrc || ""} onCancel={() => setCropSrc(null)} onConfirm={handleCropConfirm} />
     </Card>
@@ -188,11 +187,13 @@ function AdminPage() {
     setFormData(emptyForm);
   };
 
-  const tabs: { key: AdminTab; icon: typeof Package; label: string; count: number }[] = [
+  const tabs: { key: AdminTab; icon: typeof Package; label: string; count?: number }[] = [
     { key: "products", icon: Package, label: t("admin.products"), count: products.length },
     { key: "orders", icon: ShoppingCart, label: t("admin.orders"), count: allOrders.length },
     { key: "users", icon: Users, label: t("admin.users"), count: allProfiles.length },
     { key: "payments", icon: CreditCard, label: t("admin.payments"), count: allOrders.filter((o) => o.status === "paid").length },
+    { key: "settings", icon: Settings, label: t("admin.settings") },
+    { key: "assistant", icon: Bot, label: t("admin.assistant") },
   ];
 
   return (
@@ -202,7 +203,7 @@ function AdminPage() {
         {tabs.map(({ key, icon: Icon, label, count }) => (
           <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${tab === key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
             <Icon className="h-4 w-4" /> {label}
-            <span className="rounded-full bg-background/20 px-2 py-0.5 text-xs">{count}</span>
+            {typeof count === "number" && <span className="rounded-full bg-background/20 px-2 py-0.5 text-xs">{count}</span>}
           </button>
         ))}
       </div>
@@ -271,11 +272,18 @@ function AdminPage() {
                 ))}
                 <div className="mt-2 flex items-center justify-between border-t pt-2">
                   <span className="font-bold">{order.total.toLocaleString()} RWF</span>
-                  {order.status === "paid" && (
-                    <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, "delivered")}>
-                      <Truck className="mr-1 h-4 w-4" /> {t("admin.markDelivered")}
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {order.status === "pending" && (
+                      <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, "paid")}>
+                        <CheckCircle2 className="mr-1 h-4 w-4" /> Mark paid
+                      </Button>
+                    )}
+                    {order.status === "paid" && (
+                      <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, "delivered")}>
+                        <Truck className="mr-1 h-4 w-4" /> {t("admin.markDelivered")}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -283,21 +291,7 @@ function AdminPage() {
         </div>
       )}
 
-      {tab === "users" && (
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Name</th><th className="p-3">Phone</th></tr></thead>
-            <tbody>
-              {allProfiles.map((u) => (
-                <tr key={u.id} className="border-b hover:bg-muted/50">
-                  <td className="p-3 font-medium">{u.display_name || "—"}</td>
-                  <td className="p-3">{u.phone || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {tab === "users" && <AdminUsersTab />}
 
       {tab === "payments" && (
         <div className="mt-6 space-y-4">
@@ -321,6 +315,9 @@ function AdminPage() {
           ))}
         </div>
       )}
+
+      {tab === "settings" && <AdminSettingsTab />}
+      {tab === "assistant" && <AdminAssistantTab />}
     </div>
   );
 }
