@@ -116,7 +116,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .eq("user_id", userId);
     
     if (profile) {
-      const role = roles?.[0]?.role || "user";
+      const roleList = (roles ?? []).map((r) => r.role);
+      const role = roleList.includes("admin") ? "admin" : roleList.includes("moderator") ? "moderator" : "user";
       const up: UserProfile = {
         id: profile.id,
         user_id: profile.user_id,
