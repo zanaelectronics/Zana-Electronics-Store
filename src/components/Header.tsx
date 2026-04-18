@@ -10,6 +10,7 @@ const langFlags: Record<Language, string> = {
   rw: "🇷🇼",
   sw: "🇹🇿",
   zh: "🇨🇳",
+  fr: "🇫🇷",
 };
 
 export function Header() {
