@@ -104,17 +104,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-    
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    
+    const [{ data: profile }, { data: roles }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
     if (profile) {
       const roleList = (roles ?? []).map((r) => r.role);
       const role = roleList.includes("admin") ? "admin" : roleList.includes("moderator") ? "moderator" : "user";
@@ -149,30 +142,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Auth state listener
+  // Auth state listener — non-blocking profile fetch so UI renders immediately
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const user = session?.user ?? null;
+    let mounted = true;
+
+    const handleSession = (user: SupabaseUser | null) => {
+      if (!mounted) return;
       setCurrentUser(user);
+      setLoading(false);
       if (user) {
-        await fetchProfile(user.id);
+        fetchProfile(user.id);
       } else {
         setUserProfile(null);
         setOrders([]);
       }
-      setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session?.user ?? null);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const user = session?.user ?? null;
-      setCurrentUser(user);
-      if (user) {
-        fetchProfile(user.id);
-      }
-      setLoading(false);
+      handleSession(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, [fetchProfile]);
 
   // Fetch products on mount
