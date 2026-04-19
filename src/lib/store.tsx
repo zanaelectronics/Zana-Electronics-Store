@@ -104,17 +104,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-    
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    
+    const [{ data: profile }, { data: roles }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
     if (profile) {
       const roleList = (roles ?? []).map((r) => r.role);
       const role = roleList.includes("admin") ? "admin" : roleList.includes("moderator") ? "moderator" : "user";
