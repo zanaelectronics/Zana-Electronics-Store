@@ -240,14 +240,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [fetchOrders]);
 
   const processPayment = useCallback(async (orderId: string, phone: string) => {
-    // Simulate MoMo payment processing
-    await new Promise((r) => setTimeout(r, 3000));
-    await supabase
-      .from("orders")
-      .update({ status: "paid" as const, payment_phone: phone, payment_ref: `MOMO-${Date.now()}` })
-      .eq("id", orderId);
+    // Initiate MTN MoMo Request-to-Pay via edge function
+    const { data: initData, error: initErr } = await supabase.functions.invoke("momo-pay", {
+      body: { orderId, phone },
+    });
+    if (initErr || !initData?.success) {
+      console.error("MoMo initiate failed:", initErr, initData);
+      return false;
+    }
+
+    // Poll status for up to ~60s
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const { data: statusData } = await supabase.functions.invoke("momo-status", {
+        body: { orderId },
+      });
+      if (statusData?.status === "SUCCESSFUL") {
+        await fetchOrders();
+        return true;
+      }
+      if (statusData?.status === "FAILED") {
+        await fetchOrders();
+        return false;
+      }
+    }
     await fetchOrders();
-    return true;
+    return false;
   }, [fetchOrders]);
 
   const addProduct = useCallback(async (product: Omit<Product, "id">) => {
