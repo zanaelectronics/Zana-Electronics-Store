@@ -160,6 +160,17 @@ function DashboardPage() {
                   {order.payment_ref && (
                     <p className="mt-2 text-xs text-muted-foreground">Payment ref: {order.payment_ref}</p>
                   )}
+
+                  {(order.courier || order.tracking_note || order.delivered_at) && (
+                    <div className="mt-3 rounded-lg border bg-muted/30 p-3 text-sm">
+                      <p className="mb-1 flex items-center gap-1 font-semibold">
+                        <Truck className="h-4 w-4" /> {t("delivery.tracking")}
+                      </p>
+                      {order.courier && <p className="text-xs"><span className="text-muted-foreground">{t("delivery.courier")}:</span> {order.courier}</p>}
+                      {order.tracking_note && <p className="text-xs"><span className="text-muted-foreground">{t("delivery.note")}:</span> {order.tracking_note}</p>}
+                      {order.delivered_at && <p className="text-xs"><span className="text-muted-foreground">{t("delivery.deliveredOn")}:</span> {new Date(order.delivered_at).toLocaleDateString()}</p>}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

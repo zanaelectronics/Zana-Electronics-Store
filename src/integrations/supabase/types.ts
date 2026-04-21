@@ -55,32 +55,41 @@ export type Database = {
       }
       orders: {
         Row: {
+          courier: string | null
           created_at: string
+          delivered_at: string | null
           id: string
           payment_phone: string | null
           payment_ref: string | null
           status: Database["public"]["Enums"]["order_status"]
           total: number
+          tracking_note: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          courier?: string | null
           created_at?: string
+          delivered_at?: string | null
           id?: string
           payment_phone?: string | null
           payment_ref?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
+          tracking_note?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          courier?: string | null
           created_at?: string
+          delivered_at?: string | null
           id?: string
           payment_phone?: string | null
           payment_ref?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           total?: number
+          tracking_note?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -210,6 +219,8 @@ export type Database = {
         | "accessories"
         | "audio"
         | "gaming"
+        | "home"
+        | "kitchen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -339,7 +350,15 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       order_status: ["pending", "paid", "delivered"],
-      product_category: ["phones", "laptops", "accessories", "audio", "gaming"],
+      product_category: [
+        "phones",
+        "laptops",
+        "accessories",
+        "audio",
+        "gaming",
+        "home",
+        "kitchen",
+      ],
     },
   },
 } as const

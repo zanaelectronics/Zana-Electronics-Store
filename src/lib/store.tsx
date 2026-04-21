@@ -8,7 +8,7 @@ export interface Product {
   description: string | null;
   price: number;
   image: string | null;
-  category: "phones" | "laptops" | "accessories" | "audio" | "gaming";
+  category: "phones" | "laptops" | "accessories" | "audio" | "gaming" | "home" | "kitchen";
   stock: number;
 }
 
@@ -29,6 +29,9 @@ export interface Order {
   created_at: string;
   payment_phone?: string | null;
   payment_ref?: string | null;
+  courier?: string | null;
+  tracking_note?: string | null;
+  delivered_at?: string | null;
   items?: OrderItem[];
 }
 
@@ -51,6 +54,7 @@ interface StoreContextType {
   logout: () => Promise<void>;
   addOrder: (items: { product: Product; quantity: number }[]) => Promise<Order | null>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  updateOrderTracking: (orderId: string, data: { courier?: string; tracking_note?: string }) => Promise<void>;
   processPayment: (orderId: string, phone: string) => Promise<boolean>;
   addProduct: (product: Omit<Product, "id">) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
@@ -245,7 +249,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [currentUser, fetchOrders]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
-    await supabase.from("orders").update({ status }).eq("id", orderId);
+    const update: any = { status };
+    if (status === "delivered") update.delivered_at = new Date().toISOString();
+    await supabase.from("orders").update(update).eq("id", orderId);
+    await fetchOrders();
+  }, [fetchOrders]);
+
+  const updateOrderTracking = useCallback(async (orderId: string, data: { courier?: string; tracking_note?: string }) => {
+    await supabase.from("orders").update(data).eq("id", orderId);
     await fetchOrders();
   }, [fetchOrders]);
 
@@ -306,7 +317,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     <StoreContext.Provider
       value={{
         products, orders, currentUser, userProfile, loading,
-        login, register, logout, addOrder, updateOrderStatus,
+        login, register, logout, addOrder, updateOrderStatus, updateOrderTracking,
         processPayment, addProduct, updateProduct, deleteProduct,
         pendingOrderProduct, setPendingOrderProduct,
         refreshProducts: fetchProducts, refreshOrders: fetchOrders,
