@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Globe, Menu, ShoppingBag, User, X, LogOut, LayoutDashboard, Shield, Check } from "lucide-react";
+import { Globe, Menu, ShoppingBag, User, X, LogOut, LayoutDashboard, Shield, Check, ShoppingCart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useI18n, type Language } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 
 const langFlags: Record<Language, string> = {
@@ -16,6 +17,7 @@ const langFlags: Record<Language, string> = {
 export function Header() {
   const { t, language, setLanguage, languages } = useI18n();
   const { currentUser, userProfile, logout } = useStore();
+  const { totalItems, setOpen: setCartOpen } = useCart();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -67,6 +69,21 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCartOpen(true)}
+            className="relative gap-1.5"
+            aria-label="Open cart"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {totalItems}
+              </span>
+            )}
+          </Button>
+
           <div className="relative" ref={langRef}>
             <Button variant="ghost" size="sm" onClick={() => setLangOpen(!langOpen)} className="gap-1.5 text-muted-foreground">
               <span className="text-base leading-none">{langFlags[language]}</span>

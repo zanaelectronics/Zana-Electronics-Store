@@ -94,7 +94,7 @@ function ProductForm({
           <div className="space-y-1">
             <Label>Category</Label>
             <select value={data.category} onChange={(e) => onChange({ ...data, category: e.target.value as Product["category"] })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-              <option value="phones">Phones</option><option value="laptops">Laptops</option><option value="accessories">Accessories</option><option value="audio">Audio</option><option value="gaming">Gaming</option>
+              <option value="phones">Phones</option><option value="laptops">Laptops</option><option value="accessories">Accessories</option><option value="audio">Audio</option><option value="gaming">Gaming</option><option value="home">Home</option><option value="kitchen">Kitchen</option>
             </select>
           </div>
         </div>

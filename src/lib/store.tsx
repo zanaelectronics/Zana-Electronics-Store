@@ -8,7 +8,7 @@ export interface Product {
   description: string | null;
   price: number;
   image: string | null;
-  category: "phones" | "laptops" | "accessories" | "audio" | "gaming";
+  category: "phones" | "laptops" | "accessories" | "audio" | "gaming" | "home" | "kitchen";
   stock: number;
 }
 
@@ -29,6 +29,9 @@ export interface Order {
   created_at: string;
   payment_phone?: string | null;
   payment_ref?: string | null;
+  courier?: string | null;
+  tracking_note?: string | null;
+  delivered_at?: string | null;
   items?: OrderItem[];
 }
 
