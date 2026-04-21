@@ -172,12 +172,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Fetch products on mount
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Fetch orders when user changes
+  // Fetch orders when user changes + subscribe to realtime updates
   useEffect(() => {
-    if (currentUser) {
-      fetchOrders();
-      fetchAllProfiles();
-    }
+    if (!currentUser) return;
+    fetchOrders();
+    fetchAllProfiles();
+
+    const channel = supabase
+      .channel(`orders-${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => { fetchOrders(); },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [currentUser, fetchOrders, fetchAllProfiles]);
 
   const login = useCallback(async (email: string, password: string) => {
