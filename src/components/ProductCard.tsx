@@ -1,23 +1,16 @@
-import { useNavigate } from "@tanstack/react-router";
 import { ShoppingCart } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { useStore, type Product } from "@/lib/store";
+import { type Product } from "@/lib/store";
+import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 export function ProductCard({ product }: { product: Product }) {
   const { t } = useI18n();
-  const { currentUser, setPendingOrderProduct, addOrder } = useStore();
-  const navigate = useNavigate();
+  const { addToCart } = useCart();
 
-  const handleOrder = async () => {
-    if (!currentUser) {
-      setPendingOrderProduct(product);
-      navigate({ to: "/login" });
-      return;
-    }
-    await addOrder([{ product, quantity: 1 }]);
-    navigate({ to: "/dashboard" });
+  const handleOrder = () => {
+    addToCart(product, 1);
   };
 
   return (
@@ -43,7 +36,7 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
           <Button size="sm" onClick={handleOrder} className="gap-1.5">
             <ShoppingCart className="h-4 w-4" />
-            {t("products.order")}
+            {t("products.addToCart")}
           </Button>
         </div>
         {product.stock < 5 && (

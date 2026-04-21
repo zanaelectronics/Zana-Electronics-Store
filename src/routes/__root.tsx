@@ -3,9 +3,11 @@ import appCss from "../styles.css?url";
 import { I18nProvider } from "@/lib/i18n";
 import { StoreProvider } from "@/lib/store";
 import { SiteSettingsProvider } from "@/lib/site-settings";
+import { CartProvider } from "@/lib/cart";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { HelpChat } from "@/components/HelpChat";
+import { CartDrawer } from "@/components/CartDrawer";
 
 function NotFoundComponent() {
   return (
@@ -69,14 +71,17 @@ function RootComponent() {
     <I18nProvider>
       <StoreProvider>
         <SiteSettingsProvider>
-          <div className="flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">
-              <Outlet />
-            </main>
-            <Footer />
-            <HelpChat />
-          </div>
+          <CartProvider>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">
+                <Outlet />
+              </main>
+              <Footer />
+              <HelpChat />
+              <CartDrawer />
+            </div>
+          </CartProvider>
         </SiteSettingsProvider>
       </StoreProvider>
     </I18nProvider>

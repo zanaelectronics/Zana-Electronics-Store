@@ -18,7 +18,7 @@ export const Route = createFileRoute("/products")({
   component: ProductsPage,
 });
 
-const categories = ["all", "phones", "laptops", "accessories", "audio", "gaming"] as const;
+const categories = ["all", "phones", "laptops", "accessories", "audio", "gaming", "home", "kitchen"] as const;
 
 function ProductsPage() {
   const { t } = useI18n();
