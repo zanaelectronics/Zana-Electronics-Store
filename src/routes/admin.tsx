@@ -132,13 +132,14 @@ function ProductForm({
 
 function AdminPage() {
   const { t } = useI18n();
-  const { currentUser, userProfile, products, allOrders, allProfiles, addProduct, deleteProduct, updateProduct, updateOrderStatus, loading } = useStore();
+  const { currentUser, userProfile, products, allOrders, allProfiles, addProduct, deleteProduct, updateProduct, updateOrderStatus, updateOrderTracking, loading } = useStore();
   const navigate = useNavigate();
   const [tab, setTab] = useState<AdminTab>("products");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyForm);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [trackingEdits, setTrackingEdits] = useState<Record<string, { courier: string; tracking_note: string }>>({});
 
   if (!loading && (!currentUser || userProfile?.role !== "admin")) {
     navigate({ to: "/login" });
@@ -252,7 +253,9 @@ function AdminPage() {
         <div className="mt-6 space-y-4">
           {allOrders.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">No orders yet</div>
-          ) : allOrders.map((order) => (
+          ) : allOrders.map((order) => {
+            const edit = trackingEdits[order.id] || { courier: order.courier || "", tracking_note: order.tracking_note || "" };
+            return (
             <Card key={order.id}>
               <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
                 <div>
@@ -285,9 +288,43 @@ function AdminPage() {
                     )}
                   </div>
                 </div>
+
+                {(order.status === "paid" || order.status === "delivered") && (
+                  <div className="mt-3 space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <p className="flex items-center gap-1 text-xs font-semibold">
+                      <Truck className="h-3.5 w-3.5" /> {t("delivery.tracking")}
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Input
+                        placeholder={t("delivery.courier")}
+                        value={edit.courier}
+                        onChange={(e) => setTrackingEdits((p) => ({ ...p, [order.id]: { ...edit, courier: e.target.value } }))}
+                      />
+                      <Input
+                        placeholder={t("delivery.note")}
+                        value={edit.tracking_note}
+                        onChange={(e) => setTrackingEdits((p) => ({ ...p, [order.id]: { ...edit, tracking_note: e.target.value } }))}
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        await updateOrderTracking(order.id, { courier: edit.courier, tracking_note: edit.tracking_note });
+                        toast.success(t("delivery.update"));
+                      }}
+                    >
+                      {t("delivery.update")}
+                    </Button>
+                    {order.delivered_at && (
+                      <p className="text-xs text-muted-foreground">{t("delivery.deliveredOn")}: {new Date(order.delivered_at).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
