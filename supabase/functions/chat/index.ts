@@ -11,8 +11,8 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const SYCOMINDUSTRY_LTD_API_KEY = Deno.env.get("SYCOMINDUSTRY_LTD_API_KEY");
+    if (!SYCOMINDUSTRY_LTD_API_KEY) throw new Error("SYCOMINDUSTRY_LTD_API_KEY not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -51,10 +51,10 @@ ${productList || "(No products yet)"}
 
 Always answer in the language the user writes in. Prices are RWF. Be concise.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.sycomindustry ltd.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SYCOMINDUSTRY_LTD_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
